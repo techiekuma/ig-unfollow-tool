@@ -1,6 +1,7 @@
 from time import sleep
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
 
 class InstaBot:
 	def __init__(self, username, password):
@@ -49,19 +50,18 @@ class InstaBot:
 
 	def scroll(self, popup_window):
 		js_command = """
-					popup_window = document.querySelector('.isgrP');
-					popup_window.scrollTo(0, popup_window.scrollHeight);
-					var curr_page_len = popup_window.scrollHeight;
-					return curr_page_len;
+					loading = document.querySelector("div[role='progressbar']");
+					if (loading) {
+					loading.scrollIntoView();
+					}
+					return loading;
 					"""
-		curr_page_len = self.browser.execute_script(js_command)
+		loading_el = self.browser.execute_script(js_command)
 		scrolling = True
 		sleep(1)
 		while scrolling:
-			prev_page_len = curr_page_len
-			curr_page_len = self.browser.execute_script(js_command)
-			if prev_page_len == curr_page_len:
-				scrolling = False
+			loading_el = self.browser.execute_script(js_command)
+			scrolling = loading_el != None
 			sleep(1)
 
 	def convert_str_to_num(self, num_as_str):
@@ -80,10 +80,10 @@ class InstaBot:
 
 	def get_followers(self):
 		# Get number of followers
-		num_of_followers = self.browser.find_element_by_xpath("//*[@id='react-root']/section/main/div/header/section/ul/li[2]/a/span").text
+		num_of_followers = self.browser.find_element(By.XPATH, "/html/body/div[2]/div/div/div[2]/div/div/div[1]/div[2]/div/div[1]/section/main/div/header/section[3]/ul/li[2]/div/a/span/span").text
 		num_of_followers = self.convert_str_to_num(num_of_followers)
 
-		followers_button = self.browser.find_element_by_partial_link_text("followers")
+		followers_button = self.browser.find_element(By.PARTIAL_LINK_TEXT, "followers")
 		followers_button.click()
 		sleep(5)
 
@@ -93,12 +93,12 @@ class InstaBot:
 
 		# Get the usernames of all followers
 		usernames_of_followers = set()
-		followers = self.browser.find_elements_by_css_selector('.FPmhX.notranslate')
+		followers = self.browser.find_elements(By.CSS_SELECTOR, "a.notranslate")
 		for follower in followers:
 			usernames_of_followers.add(follower.text)
 
 		# Close popup window
-		close_popup_button = self.browser.find_element_by_xpath("/html/body/div[5]/div/div/div[1]/div/div[2]/button")
+		close_popup_button = self.browser.find_element(By.XPATH, "/html/body/div[6]/div[2]/div/div/div[1]/div/div[2]/div/div/div/div/div[2]/div/div/div[1]/div/div[3]/div/button")
 		close_popup_button.click() 
 
 		return usernames_of_followers, num_of_followers
@@ -108,12 +108,12 @@ class InstaBot:
 		# Unfollow accounts that don't follow you back
 
 		# Get number of accounts you are following (before unfollowing those that don't follow you back)
-		num_following_before = self.browser.find_element_by_xpath("//*[@id='react-root']/section/main/div/header/section/ul/li[3]/a/span").text
+		num_following_before = self.browser.find_element(By.XPATH, "/html/body/div[2]/div/div/div[2]/div/div/div[1]/div[2]/div/div[1]/section/main/div/header/section[3]/ul/li[3]/div/a/span/span").text
 		num_following_before = self.convert_str_to_num(num_following_before)
 
 		# Click on the "following" button
 		# this will open a popup window that lists accounts you're following
-		following_button = self.browser.find_element_by_partial_link_text("following")
+		following_button = self.browser.find_element(By.PARTIAL_LINK_TEXT, "following")
 		following_button.click()
 		sleep(5)
 
@@ -125,12 +125,12 @@ class InstaBot:
 		accounts_unfollowed = self.unfollow_helper(followers, num_following_before)
 
 		# Close popup window
-		close_popup_button = self.browser.find_element_by_xpath("/html/body/div[5]/div/div/div[1]/div/div[2]/button")
+		close_popup_button = self.browser.find_element(By.XPATH, "/html/body/div[6]/div[2]/div/div/div[1]/div/div[2]/div/div/div/div/div[2]/div/div/div[1]/div/div[3]/div/button")
 		close_popup_button.click() 
 		sleep(1)
 
 		# Get number of accounts you are following now (after ufollowing those that don't follow you back)
-		num_following_after = self.browser.find_element_by_xpath("//*[@id='react-root']/section/main/div/header/section/ul/li[3]/a/span").text
+		num_following_after = self.browser.find_element(By.XPATH, "/html/body/div[2]/div/div/div[2]/div/div/div[1]/div[2]/div/div[1]/section/main/div/header/section[3]/ul/li[3]/div/a/span/span").text
 		num_following_after = self.convert_str_to_num(num_following_after)
 
 		# Return the number of people you've unfollowed and their usernames
@@ -141,14 +141,13 @@ class InstaBot:
 		accounts_unfollowed = set()
 
 		for i in range(int(num_following_before), 0, -1):
-			following = self.browser.find_element_by_xpath("/html/body/div[5]/div/div/div[2]/ul/div/li[{}]/div/div[1]/div[2]/div[1]/span/a".format(i))
-			following_username = following.get_attribute("title")
+			following_username = self.browser.find_element(By.XPATH, "/html/body/div[6]/div[2]/div/div/div[1]/div/div[2]/div/div/div/div/div[2]/div/div/div[4]/div[1]/div/div[{}]/div/div/div/div[2]/div/div/div/div/div/a/div/div/span".format(i)).text
 			if following_username not in followers:
 				# Unfollow account
-				following_user_button = self.browser.find_element_by_xpath("/html/body/div[5]/div/div/div[2]/ul/div/li[{}]/div/div[2]/button".format(i))
+				following_user_button = self.browser.find_element(By.XPATH, "/html/body/div[6]/div[2]/div/div/div[1]/div/div[2]/div/div/div/div/div[2]/div/div/div[4]/div[1]/div/div[{}]/div/div/div/div[3]/div/button".format(i))
 				following_user_button.click()
 				sleep(1)
-				unfollow_user_button = self.browser.find_element_by_xpath("/html/body/div[6]/div/div/div/div[3]/button[1]")
+				unfollow_user_button = self.browser.find_element(By.XPATH, "/html/body/div[7]/div[1]/div/div[2]/div/div/div/div/div/div/button[1]")
 				self.browser.execute_script("arguments[0].click();", unfollow_user_button)
 				sleep(1)
 				accounts_unfollowed.add(following_username)
@@ -163,15 +162,15 @@ class HomePage:
 
     def login(self, username, password):
     	# Find the username and password inputs
-        username_input = self.browser.find_element_by_css_selector("input[name='username']")
-        password_input = self.browser.find_element_by_css_selector("input[name='password']")
+        username_input = self.browser.find_element(By.CSS_SELECTOR, "input[name='username']")
+        password_input = self.browser.find_element(By.CSS_SELECTOR, "input[name='password']")
 
         # Type your username and password in their respective inputs
         username_input.send_keys(username)
         password_input.send_keys(password)
 
         # Submit credentials and wait for page to load
-        login_button = self.browser.find_element_by_xpath("//button[@type='submit']")
+        login_button = self.browser.find_element(By.XPATH, "//button[@type='submit']")
         login_button.click()
         sleep(5)
 
